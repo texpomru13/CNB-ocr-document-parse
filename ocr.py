@@ -33,19 +33,19 @@ def ocr(path):
     titulres = {}
     allres_stamp = []
     for page in doc:
-        result_stamp = {'stage': {'easy': [], 'fitz': [], 'tess': []},
-                        'stageSecond': {'easy': [], 'fitz': [], 'tess': []},
-                        'documentDate': {'easy': [],
-                                         'fitz': [],
-                                         'tess': []},
-                        'documentDateSecond': {'easy': [], 'fitz': [], 'tess': []},
-                        'documentDateThird': {'easy': [], 'fitz': [], 'tess': []},
-                        'changeNumber': {'easy': [],
-                                         'fitz': [],
-                                         'tess': []},
-                        'designInstitute': {'easy': [],
-                                            'fitz': [],
-                                            'tess': []}}
+        result_stamp = {'stage': {'easy': "", 'fitz': "", 'tess': ""},
+                        'stageSecond': {'easy': "", 'fitz': "", 'tess': ""},
+                        'documentDate': {'easy': "",
+                                         'fitz': "",
+                                         'tess': ""},
+                        'documentDateSecond': {'easy': "", 'fitz': "", 'tess': ""},
+                        'documentDateThird': {'easy': "", 'fitz': "", 'tess': ""},
+                        'changeNumber': {'easy': "",
+                                         'fitz': "",
+                                         'tess': ""},
+                        'designInstitute': {'easy': "",
+                                            'fitz': "",
+                                            'tess': ""}}
         bb = []
         mat = fitz.Matrix(6, 6)
         rect = page.rect  # the page rectangle
@@ -132,7 +132,7 @@ def ocr(path):
         if cp >= 7:
             break
     maxs = 0
-    stamp_res = {}
+    stamp_res = allres_stamp[0]
     for s in allres_stamp:
         size = 0
         for i in s:

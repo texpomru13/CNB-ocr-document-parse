@@ -1,9 +1,6 @@
 import json
 from Levenshtein import distance
 
-with open("res.json", "r") as json_file:
-    res = json.load(json_file)
-
 with open("available.json", "r") as json_file:
     avail = json.load(json_file)
 
