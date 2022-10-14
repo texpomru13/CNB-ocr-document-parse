@@ -119,7 +119,7 @@ def ocr(path):
                 try:
 
                     result_stamp[par] = stamp_recognize(cropped_img, tmp1conf["table"][par], par, w, h, alt_par, blocks)
-                    allres_stamp.append(result_stamp)
+
                 except Exception as e:
                     print(e)
                 cv.imwrite("cropped_img/{}.jpg".format(par), cropped_img)
@@ -127,6 +127,7 @@ def ocr(path):
 
         except Exception as e:
             print(e)
+        allres_stamp.append(result_stamp)
         cp += 1
         if cp >= 7:
             break
