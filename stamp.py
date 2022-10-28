@@ -75,11 +75,13 @@ def matching():
 
 def titul_recgnize(data, param, fitz_data):
 
-    tess = re.sub(r"\n\b", "", pytesseract.image_to_string(data , config="--psm 3 -l rus+eng"))
-    # for b in fitz_data:
-    #     for l in b["lines"]:
-    #         for line in l["spans"]:
-    #             print(line["text"])
+    tess = re.sub(r"\n\b", " ", pytesseract.image_to_string(data , config="--psm 3 -l rus+eng"))
+    pprint(tess)
+    print("\nfitzdata")
+    for b in fitz_data:
+        for l in b["lines"]:
+            for line in l["spans"]:
+                print(line["text"])
 
     result = {
         "documentCipher": {
@@ -125,6 +127,12 @@ def titul_recgnize(data, param, fitz_data):
         if match:
             tmp = 2
             result["inventoryNumber"]["fitz"] = match[0]
+        if tmp is None:
+            for l in fitz_lines:
+                if "проектная документация" == l.lower().strip():
+                    tmp = 2
+                    break
+
         documentCipher_ind = None
         for line in range(len(fitz_lines)):
             match = re.search(param["documentCipher"]["reg"], fitz_lines[line])
@@ -139,6 +147,9 @@ def titul_recgnize(data, param, fitz_data):
                     if match:
                         result["documentDate"]["fitz"] += fitz_lines[1]
                 for i in range(1,4):
+                    match = re.search(param["changeNumber"]["reg"], fitz_lines[line+i].lower())
+                    if match:
+                        result["changeNumber"]["fitz"] = match[1]
                     if tmp == 2 and "том" in fitz_lines[line+i].lower():
                         result["documentName"]["fitz"] += fitz_lines[line+i]
                         break
@@ -146,43 +157,73 @@ def titul_recgnize(data, param, fitz_data):
         constructionName_ind = None
         if documentCipher_ind:
             milestone = False
+            docnamelen = 0
+            print("wich tmp?")
+            print(tmp)
+            construction = False
             for line in reversed(range(documentCipher_ind)):
-
-                if tmp == 2:
-                    match = re.search(param["milestone"]["reg"], fitz_lines[line].lower())
-                    if match:
-                        result["milestone"]["fitz"] = fitz_lines[line] + "\n" + result["milestone"]["fitz"]
-                        milestone = True
-                    elif milestone:
-                        if len(fitz_lines[line]) > 3:
-                            result["constructionName"]["fitz"] = fitz_lines[line]
-                        elif len(fitz_lines[line-1]) > 3:
-                            result["constructionName"]["fitz"] = fitz_lines[line-1]
-                        break
-                    else:
-                        result["documentName"]["fitz"] = fitz_lines[line+1] + " " + result["documentName"]["fitz"]
-                elif tmp == 1:
-                    match = re.search("«.+»", fitz_lines[line])
-                    if match:
-                        result["constructionName"]["fitz"] = fitz_lines[line]
-                        break
+                if str(fitz_lines[line]).replace(' ', '') == "\n":
+                    pass
                 else:
-                    match = re.search(param["milestone"]["reg"], fitz_lines[line].lower())
-                    if match:
-                        result["milestone"]["fitz"] = fitz_lines[line] + "\n" + result["milestone"]["fitz"]
-                        milestone = True
-                    elif milestone:
-                        result["constructionName"]["fitz"] = fitz_lines[line]
-                        break
+                    if tmp == 2:
+                        print(fitz_lines[line])
+                        match = re.search(param["milestone"]["reg"], fitz_lines[line].lower())
+                        construction = True if "проектная документация" == fitz_lines[line].lower().strip() else False
+                        if match:
+                            result["milestone"]["fitz"] = fitz_lines[line] + "\n" + result["milestone"]["fitz"]
+                            milestone = True
+                        elif construction:
+                            milestone = True
+                            construction = False
+                        elif milestone:
+                            space = 0
+                            constructionLen = 0
+                            k = 0
+                            while True:
+                                if str(fitz_lines[line-k]).replace(' ', '') == "\n":
+                                    space +=1
+                                if len(fitz_lines[line-k]) > 3:
+                                    result["constructionName"]["fitz"] = fitz_lines[line-k] + " " + result["constructionName"]["fitz"]
+                                    constructionLen+=1
+                                # elif len(fitz_lines[line-1]) > 3:
+                                #     result["constructionName"]["fitz"] = fitz_lines[line-1]
+                                if space >= 3 or constructionLen >= 4 or k >= 8:
+                                    break
+                                k+=1
+                            break
+                        else:
+                            if docnamelen<=6:
+                                result["documentName"]["fitz"] = fitz_lines[line+1] + " " + result["documentName"]["fitz"]
+                                docnamelen += 1
+                    elif tmp == 1:
+                        match = re.search("«.+»", fitz_lines[line])
+                        if match:
+                            result["constructionName"]["fitz"] = fitz_lines[line]
+                            break
                     else:
-                        result["documentName"]["fitz"] = fitz_lines[line+1] + " " + result["documentName"]["fitz"]
-                    match = re.search("«.+»", fitz_lines[line])
-                    if match:
-                        result["constructionName"]["fitz"] = fitz_lines[line]
-                        break
+                        match = re.search(param["milestone"]["reg"], fitz_lines[line].lower())
+                        if match:
+                            result["milestone"]["fitz"] = fitz_lines[line] + "\n" + result["milestone"]["fitz"]
+                            milestone = True
+                        elif milestone:
+                            result["constructionName"]["fitz"] = fitz_lines[line]
+                            break
+                        else:
+                            if docnamelen<=6:
+                                result["documentName"]["fitz"] = fitz_lines[line+1] + " " + result["documentName"]["fitz"]
+                                docnamelen += 1
+                        match = re.search("«.+»", fitz_lines[line])
+                        if match:
+                            result["constructionName"]["fitz"] = fitz_lines[line]
+                            break
 
     documentCipher_ind = None
     tess_ilnes = tess.split("\n")
+    if tmp is None:
+        for l in tess_ilnes:
+            if "проектная документация" in l.lower().strip():
+                tmp = 2
+                break
     for line in range(len(tess_ilnes)):
         match = re.search(param["documentCipher"]["reg"], tess_ilnes[line])
         if match:
@@ -203,21 +244,50 @@ def titul_recgnize(data, param, fitz_data):
     constructionName_ind = None
     if documentCipher_ind:
         milestone = False
+        docnamelen = 0
         for line in reversed(range(documentCipher_ind)):
 
             if tmp == 2:
+                print(tess_ilnes[line])
                 match = re.search(param["milestone"]["reg"], tess_ilnes[line].lower())
+                construction = True if "проектная документация" == tess_ilnes[line].lower().strip() else False
                 if match:
                     result["milestone"]["tess"] = tess_ilnes[line] + "\n" + result["milestone"]["tess"]
                     milestone = True
+                elif construction:
+                    milestone = True
+                    construction = False
                 elif milestone:
-                    if len(tess_ilnes[line]) > 3:
-                        result["constructionName"]["tess"] = tess_ilnes[line]
-                    elif len(tess_ilnes[line-1]) > 3:
-                        result["constructionName"]["tess"] = tess_ilnes[line-1]
+                    space = 0
+                    constructionLen = 0
+                    k = 0
+                    while True:
+                        if str(tess_ilnes[line-k]).replace(' ', '') == "\n":
+                            space += 1
+                        if space >= 2 or constructionLen >= 4 or k >= 8:
+                            break
+                        if len(tess_ilnes[line-k]) > 3:
+                            result["constructionName"]["tess"] = tess_ilnes[line-k] + " " + result["constructionName"]["tess"]
+                            constructionLen+=1
+                        # elif len(fitz_lines[line-1]) > 3:
+                        #     result["constructionName"]["fitz"] = fitz_lines[line-1]
+
+                        k+=1
                     break
+                # match = re.search(param["milestone"]["reg"], tess_ilnes[line].lower())
+                # if match:
+                #     result["milestone"]["tess"] = tess_ilnes[line] + "\n" + result["milestone"]["tess"]
+                #     milestone = True
+                # elif milestone:
+                #     if len(tess_ilnes[line]) > 3:
+                #         result["constructionName"]["tess"] = tess_ilnes[line]
+                #     elif len(tess_ilnes[line-1]) > 3:
+                #         result["constructionName"]["tess"] = tess_ilnes[line-1]
+                #     break
                 else:
-                    result["documentName"]["tess"] = tess_ilnes[line+1] + " " + result["documentName"]["tess"]
+                    if docnamelen<=6:
+                        result["documentName"]["tess"] = tess_ilnes[line+1] + " " + result["documentName"]["tess"]
+                        docnamelen += 1
             elif tmp == 1:
                 match = re.search("«.+»", tess_ilnes[line])
                 if match:
@@ -232,7 +302,9 @@ def titul_recgnize(data, param, fitz_data):
                     result["constructionName"]["tess"] = tess_ilnes[line]
                     break
                 else:
-                    result["documentName"]["tess"] = tess_ilnes[line+1] + " " + result["documentName"]["tess"]
+                    if docnamelen<=6:
+                        result["documentName"]["tess"] = tess_ilnes[line+1] + " " + result["documentName"]["tess"]
+                        docnamelen += 1
                 match = re.search("«.+»", tess_ilnes[line])
                 if match:
                     result["constructionName"]["tess"] = tess_ilnes[line]
@@ -242,6 +314,7 @@ def titul_recgnize(data, param, fitz_data):
 
 
 def stamp_recognize(data, param, entity, w, h, alt_par = None, fitz_data=None):
+    print("start stamp")
     result = {entity: {"tess": "",
                        "easy": "",
                        "fitz": ""}}

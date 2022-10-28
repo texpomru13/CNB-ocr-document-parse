@@ -2,6 +2,7 @@ import sys
 
 import fitz
 import json
+from pprint import pprint
 
 from stamp import stamp_recognize, titul_recgnize, reader
 from line import linecrop
@@ -143,5 +144,5 @@ def ocr(path):
         if maxs < size:
             maxs = size
             stamp_res = s
-    print({"stamp": stamp_res, "titul": titulres})
+    pprint({"stamp": stamp_res, "titul": titulres})
     return {"stamp": stamp_res, "titul": titulres}
