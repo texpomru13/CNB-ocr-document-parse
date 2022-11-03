@@ -66,7 +66,10 @@ def ocr(path):
             titulres = titul_recgnize("image/page-first-%i.jpg" % page.number, tmp1conf["titular"], blocks)
         pix = page.get_pixmap()
         pix.save("image/line.jpg")
-        y2, x2 = linecrop("image/line.jpg")
+        try:
+            y2, x2 = linecrop("image/line.jpg")
+        except:
+            y2, x2 = 0,0
 
         print(y2)
         print(x2)

@@ -31,7 +31,7 @@ async def handler(request):
             tmpid = await field.text()
             print(tmpid)
 
-    result = ocr("pdf/"+filename)
+    result = ocr("pdf/"+str(filename))
     result = merge(result)
     result["properties"]["fileName"]["value"] = filename
     return  web.json_response(result)
