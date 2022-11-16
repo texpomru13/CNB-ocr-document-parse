@@ -264,6 +264,7 @@ def titul_recgnize(data, param, fitz_data):
     if documentCipher_ind:
         milestone = False
         docnamelen = 0
+        construction = False
         for line in reversed(range(documentCipher_ind)):
 
             if tmp == 2:
