@@ -1,4 +1,9 @@
 import sys
+import pickle
+import os
+import pytesseract
+import re
+import dataobjects
 
 import fitz
 import json
@@ -21,6 +26,110 @@ def get_cropped_image(image, x, y, w, h):
 
 def stage():
     pass
+
+def ocrlight(path):
+    doc = fitz.open(path)
+    mat = fitz.Matrix(15, 15)
+    filename = ".".join(doc.name.split("/")[-1].split(".")[:-1])
+    for page in doc:
+        rect = page.rect  # the page rectangle
+        mp = (rect.tl + rect.br) / 2  # its middle point, becomes top-left of clip
+        fitz.Point(0, rect.height / 3)
+        # print(mp)
+
+        blocks = page.get_text("dict", flags=3)["blocks"]
+        sb = []
+        fitz_lines = []
+        fi = True
+        for b in blocks:
+            for l in b["lines"]:
+                for line in l["spans"]:
+                    sb.append(line)
+                    if b"\xef\xbf\xbd"*3 in line["text"].encode("utf-8"):
+                        fi = False
+                        break
+                    fitz_lines.append(line["text"].strip())
+
+        pix = page.get_pixmap(matrix=mat)
+        # pix = page.get_pixmap()  # , clip=clip
+        # pix = page.get_pixmap()  # render page to an image
+        if fi:
+            text = "\n".join(fitz_lines)
+        else:
+            text = ""
+        if text == "":
+            pix.save("image/tmptitul.jpg")
+            data = "image/tmptitul.jpg"
+            text = re.sub(r" ", " ", pytesseract.image_to_string(data, config="--psm 3 -l rus")) #\n\b
+            text = re.sub("\\n\\n+", "\\n\\n", text)
+            # with open("alltype/text/tess_"+filename+'.txt', 'w') as f:
+            #     f.write(text)
+            # with open("alltype/fitz/"+filename, 'wb') as f:
+            #     pickle.dump(blocks, f)
+        else:
+            text = re.sub("\\n\\n+", "\\n\\n", text)
+            # with open("alltype/text/"+filename+'.txt', 'w') as f:
+            #     f.write(text)
+            # with open("alltype/fitz/"+filename, 'wb') as f:
+            #     pickle.dump(sb, f)
+
+        splitplace = dataobjects.docsplit(text)
+        invent, text, splitplace = dataobjects.inventoryNumber(text, splitplace)
+        splitplace = dataobjects.docsplit(text)
+        cipher = dataobjects.documentCipher(text)
+        docdate = dataobjects.documentDate(text, cipher)
+        docend = dataobjects.docEnd(text)
+        doctype = dataobjects.docType(text)
+        change = dataobjects.changeNumber(text)
+        milestoneend = dataobjects.miestoneEnd(text)
+        milestone = dataobjects.milestone(text, doctype, milestoneend, splitplace)
+        construction = dataobjects.constructionName(text, cipher, doctype, milestoneend, milestone, docend, splitplace)
+        docname = dataobjects.documentName(text, cipher, doctype, splitplace, milestone, milestoneend, construction)
+        result = {
+            "type": "object",
+            "properties": {
+                "fileName":
+
+                    { "type": "string", "description": "Имя файла", "value": "" }
+                ,
+                "documentName":
+
+                    { "type": "string", "description": "Наименование документа", "value": docname["value"]}
+                ,
+                "documentCipher":
+
+                    { "type": "string", "description": "Шифр документа", "value": cipher["value"] }
+                ,
+                "constructionName":
+
+                    { "type": "string", "description": "Наименование стройки", "value": construction["value"] }
+                ,
+                "inventoryNumber":
+
+                    { "type": "string", "description": "Инвентарный номер", "value": invent["value"] }
+                ,
+                "milestone":
+
+                    { "type": "string", "description": "Этап", "value": milestone["value"] }
+                ,
+                "stage":
+
+                    { "type": "string", "description": "Стадия", "value": None }
+                ,
+                "changeNumber":
+
+                    { "type": "string", "description": "Номер изменения", "value": change["value"] }
+                ,
+                "documentDate":
+
+                    { "type": "string", "description": "Дата документа", "value": docdate["value"] }
+                ,
+                "designInstitute":
+
+                    { "type": "string", "description": "Проектный институт", "value": None }
+            }
+        }
+        return result
 
 
 # allfileres = {1:{}, 2:{}}

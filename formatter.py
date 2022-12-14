@@ -17,6 +17,8 @@ def best(data):
     except Exception as e:
         print(e)
         return ""
+def lightmerge(data):
+    pass
 
 def merge(data):
     result = {

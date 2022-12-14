@@ -2,7 +2,7 @@ from aiohttp import web, multipart
 import aiohttp_cors
 import asyncio
 import os
-from ocr import ocr
+from ocr import ocr, ocrlight
 from formatter import merge
 
 routes = web.RouteTableDef()
@@ -31,8 +31,8 @@ async def handler(request):
             tmpid = await field.text()
             print(tmpid)
 
-    result = ocr("pdf/"+str(filename))
-    result = merge(result)
+    result = ocrlight("pdf/"+str(filename))
+    # result = merge(result)
     result["properties"]["fileName"]["value"] = filename
     return  web.json_response(result)
 
