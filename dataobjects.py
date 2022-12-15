@@ -274,9 +274,12 @@ def constructionName(text, cipher, doctype, milestoneend, milestone, docend, spl
                 start = 2+end
     if tend:
         for i in range(1,5):
-            if lines[start-i] == "":
-                end = start-i
-                break
+            try:
+                if lines[start-i] == "":
+                    end = start-i
+                    break
+            except:
+                pass
     result = {"type": "constructionName", "value": "\n".join(lines[end:start]).strip("\n"), "line": end, "end": start, "place": 100 / len(lines) * k}
     return result
 
