@@ -331,7 +331,7 @@ def constructionName(text, cipher, doctype, milestoneend, milestone, docend, spl
     if milestoneend["line"]:
         start = milestoneend["line"]
     elif milestone["line"]:
-        start = milestone["line"]
+        start = milestone["line"] + 1
     elif doctype["line"] and cipher["place"] and doctype["place"] > 18:
         start = doctype["line"]
     else:
@@ -382,6 +382,7 @@ def milestone(text, doctype, miestoneend, splitplace):
         start = miestoneend["line"]
     else:
         start = 0
+    print(start)
     if doctype["line"] and doctype["place"] >30:
         end = doctype["line"]
     else:
@@ -407,7 +408,7 @@ def milestone(text, doctype, miestoneend, splitplace):
     elif end != len(lines) and start != 0:
         result = {"type": "milestone", "value": "\n".join(lines[start:end]), "line": start, "end": end, "place": 100 / len(lines) * start}
     elif end != len(lines):
-        result = {"type": "milestone", "value": "\n".join(lines[result[0]["line"]:end]), "line": result[0]["line"], "end": end, "place": 100 / len(lines) * result[0]["line"]}
+        result = {"type": "milestone", "value": "\n".join(lines[result[0]["line"]+1:end]), "line": result[0]["line"], "end": end, "place": 100 / len(lines) * result[0]["line"]}
     elif start != 0:
         result = {"type": "milestone", "value": "\n".join(lines[start:result[-1]["line"]]), "line": start, "end": result[-1]["line"], "place": 100 / len(lines) * start}
     else:
