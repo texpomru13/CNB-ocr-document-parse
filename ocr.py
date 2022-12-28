@@ -57,22 +57,15 @@ def ocrlight(path):
             text = "\n".join(fitz_lines)
         else:
             text = ""
-        if text == "":
+        if text == "" or len(text) < 20:
             pix.save("image/tmptitul.jpg")
             data = "image/tmptitul.jpg"
-            text = re.sub(r" ", " ", pytesseract.image_to_string(data, config="--psm 3 -l rus")) #\n\b
+            text = re.sub(r" ", " ", pytesseract.image_to_string(data, config="--psm 6 -l rus")) #\n\b
             text = re.sub("\\n\\n+", "\\n\\n", text)
-            # with open("alltype/text/tess_"+filename+'.txt', 'w') as f:
-            #     f.write(text)
-            # with open("alltype/fitz/"+filename, 'wb') as f:
-            #     pickle.dump(blocks, f)
         else:
             text = re.sub("\\n\\n+", "\\n\\n", text)
-            # with open("alltype/text/"+filename+'.txt', 'w') as f:
-            #     f.write(text)
-            # with open("alltype/fitz/"+filename, 'wb') as f:
-            #     pickle.dump(sb, f)
-
+        text = dataobjects.remove(text)
+        text = dataobjects.fixplace(text)
         splitplace = dataobjects.docsplit(text)
         invent, text, splitplace = dataobjects.inventoryNumber(text, splitplace)
         splitplace = dataobjects.docsplit(text)

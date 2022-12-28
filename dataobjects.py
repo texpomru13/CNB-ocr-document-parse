@@ -9,19 +9,28 @@ def stage():
     pass
 
 def docEnd(text):
-    result = {"type": "docEnd", "value": None, "line": None, "place": None}
+    result = {"type": "docEnd", "value": "", "line": None, "place": None}
     k = 0
     lines = text.split("\n")
-    bre = 4
+    bre = 10
+    ma = 0
     for line in lines:
         match = re.search(param["titular"]["docEnd"]["reg"], line.lower())
         if match:
+            # print(line)
             if line[0] == "(":
                 for i in range(5):
                     if ")" in lines[k+i]:
                         k = k+i
                         break
-            result = {"type": "docEnd", "value": line, "line": k, "place": 100/len(lines)*k}
+            if '"' in line and '"' in lines[k+1]:
+                k+=1
+            z = k
+            # for i in range(1,3):
+            #     if lines[z+i] == "":
+            #         z+=i
+
+            result = {"type": "docEnd", "value": line, "line": z, "place": 100/len(lines)*k}
         if result["value"]:
             if bre == 0:
                 break
@@ -31,7 +40,7 @@ def docEnd(text):
     return result
 
 def miestoneEnd(text):
-    result = {"type": "miestoneEnd", "value": None, "line": None, "place": None}
+    result = {"type": "miestoneEnd", "value": "", "line": None, "place": None}
     k = 0
     lines = text.split("\n")
     for line in lines:
@@ -43,14 +52,15 @@ def miestoneEnd(text):
     return result
 
 def docType(text):
-    result = {"type": "docType", "value": None, "line": None, "place": None}
-    k = 0
+    result = {"type": "docType", "value": "", "line": None, "place": None}
+
     lines = text.split("\n")
-    for line in lines:
+    k = len(lines)-1
+    for line in reversed(lines):
         match = re.search(param["titular"]["documentType"]["reg"], line.lower())
         if match:
             result = {"type": "docType", "value": line, "line": k, "place": 100/len(lines)*k}
-        k+=1
+        k-=1
     return result
 
 def docsplit(text):
@@ -66,7 +76,7 @@ def docsplit(text):
 
 
 def documentDate(text, cipher):
-    result = {"type": "documentDate", "value": None, "line": None, "place": None}
+    result = {"type": "documentDate", "value": "", "line": None, "place": None}
     k =0
     minDate = None
     lines = text.split("\n")
@@ -113,7 +123,7 @@ def documentDate(text, cipher):
 
 
 def changeNumber(text):
-    result = {"type": "changeNumber", "value": None, "line": None, "place": None}
+    result = {"type": "changeNumber", "value": "", "line": None, "place": None}
     k =0
     lines = text.split("\n")
     match = re.search(param["titular"]["changeNumber"]["reg"], text.lower())
@@ -130,15 +140,79 @@ def changeNumber(text):
 def designInstitute():
     pass
 
+def remove(text):
+    lines = text.split("\n")
+    nt = []
+    for line in lines:
+        line = re.sub("\\S? *\\|\\s*[^a-zA-Zа-яА-Я]?\\s", "", line)
+        line = re.sub("\\S? *\\|\\s*[^a-zA-Zа-яА-Я]?\\s", "", line)
+        line = re.sub("[°*“|„]", "", line)
+        line = re.sub(" +", " ", line).strip()
+        match = re.search(param["titular"]["remove"]["reg"], line.lower())
+        if match:
+            pass
+        else:
+            nt.append(line)
+
+    return "\n".join(nt)
+
+def fixplace(text):
+    nt = []
+    k = -1
+    lines = text.split("\n")
+    notskip = True
+    for line in lines:
+        k+=1
+        if notskip:
+            nt.append(line)
+        else:
+            notskip = True
+        try:
+            tom = re.search(param["titular"]["tom"]["reg"], line.lower())
+            izm = re.search("^изм", lines[k+1].lower())
+            tmptext = line+ " " + lines[k+1]
+            if tom or izm:
+                pass
+            else:
+                match = re.search(param["titular"]["documentCipher"]["reg"], line + lines[k+1])
+                if match and match.end() >= len(line+lines[k+1])-1:
+                    nt[-1] += lines[k+1]
+                    notskip = False
+                    continue
+            start = re.search(param["titular"]["documentType"]["reg"], line.lower())
+            end = re.search(param["titular"]["documentType"]["reg"], lines[k+1].lower())
+            match = re.search(param["titular"]["documentType"]["reg"], tmptext.lower())
+            if start or end:
+                match = None
+            if match:
+                nt[-1] += " " +  lines[k+1]
+                notskip = False
+                continue
+            start = re.search(param["titular"]["milestone"]["reg"], line.lower())
+            end = re.search(param["titular"]["milestone"]["reg"], lines[k+1].lower())
+            match = re.search(param["titular"]["milestone"]["reg"], tmptext.lower())
+            if start or end:
+                match = None
+            if match:
+                nt[-1] += " " + lines[k+1]
+                notskip = False
+                continue
+        except:
+            pass
+
+
+    return "\n".join(nt)
+
 def documentCipher(text):
-    result = {"type": "Cipher", "value": None, "line": None, "place": None}
+    result = {"type": "Cipher", "value": "", "line": None, "place": None}
     k = 0
     lines = text.split("\n")
     for line in lines:
-        match = re.search(param["titular"]["documentCipher"]["reg"], line)
+        match = re.search(param["titular"]["documentCipher"]["reg"], line.replace(" ", "", 1))
         if match:
             result = {"type": "Cipher", "value": line, "line": k, "place": 100/len(lines)*k}
             break
+
         k+=1
     return result
 
@@ -150,13 +224,14 @@ def documentName(text, cipher, doctype, splitplace, milestone, milestoneend, con
     end = None
     tend = True
     start = None
-    if cipher["value"] is None:
-        return {"type": "documentName", "value": None, "line": None, "place": None}
+    if cipher["value"] == "":
+        return {"type": "documentName", "value": "", "line": None, "place": None}
     elif cipher["place"] > 30:
 
         k = 0
         for line in lines[cipher["line"]:]:
             match = re.search("^изм", line.lower())
+
             if match:
                 end = cipher["line"]+k
                 break
@@ -164,18 +239,19 @@ def documentName(text, cipher, doctype, splitplace, milestone, milestoneend, con
                 break
             k+=1
 
+        k = 0
         if end is None:
             for line in lines[cipher["line"]:]:
                 match = re.search(param["titular"]["tom"]["reg"], line.lower())
                 if match:
-                    end = cipher["line"]+k
+                    end = cipher["line"]+k+1
                     break
                 if k > 3:
                     break
                 k+=1
 
         if end is None:
-            end = cipher["line"]-1
+            end = cipher["line"]
     else:
         k = 0
         for line in reversed(lines):
@@ -186,6 +262,8 @@ def documentName(text, cipher, doctype, splitplace, milestone, milestoneend, con
             if k > 10:
                 break
             k+=1
+
+        k = 0
         if end is None:
             for line in reversed(lines):
                 match = re.search(param["titular"]["tom"]["reg"], line.lower())
@@ -207,10 +285,17 @@ def documentName(text, cipher, doctype, splitplace, milestone, milestoneend, con
     elif construction["value"]:
         start = construction["end"] +1
     else:
-        return {"type": "documentName", "value": None, "line": None, "place": None}
-    res = "\n".join(lines[start:end])
-    res = res.replace(cipher["value"], "").strip("\n")
-    res = re.sub("\\n\\n+", "\\n\\n", res)
+        return {"type": "documentName", "value": "", "line": None, "place": None}
+    res = []
+    for l in lines[start:end]:
+        if re.search(param["titular"]["documentCipher"]["reg"], l):
+            pass
+        else:
+            res.append(l)
+    res = "\n".join(res)
+    res = re.sub("\\n", " ", res)
+    res = re.sub("\\([^\\(]{69,}\\)|[\\_\\\]", "", res)
+    res = re.sub(" +", " ", res)
     return {"type": "documentName", "value": res, "line": start, "place": None}
 
 
@@ -237,14 +322,14 @@ def constructionName(text, cipher, doctype, milestoneend, milestone, docend, spl
             mi = min(splitplace)
             splitplace.pop(mi)
         else:
-            mi = 4
-        if mi < 4:
+            mi = 2
+        if mi < 2:
             end = mi
         else:
-            end = 4
+            end = 2
 
     if milestoneend["line"]:
-        start = milestoneend["line"]-1
+        start = milestoneend["line"]
     elif milestone["line"]:
         start = milestone["line"]
     elif doctype["line"] and cipher["place"] and doctype["place"] > 18:
@@ -254,7 +339,7 @@ def constructionName(text, cipher, doctype, milestoneend, milestone, docend, spl
         for line in lines:
             match = re.search(param["titular"]["constructionNameLC"]["reg"], line.lower())
             if match:
-                start = k-1
+                start = k
                 break
             if k >=12:
                 break
@@ -268,6 +353,8 @@ def constructionName(text, cipher, doctype, milestoneend, milestone, docend, spl
                     if mim > end:
                         mi = mim
                         break
+                    if splitplace == {}:
+                        break
             if mi:
                 start = mi
             else:
@@ -280,7 +367,11 @@ def constructionName(text, cipher, doctype, milestoneend, milestone, docend, spl
                     break
             except:
                 pass
-    result = {"type": "constructionName", "value": "\n".join(lines[end:start]).strip("\n"), "line": end, "end": start, "place": 100 / len(lines) * k}
+    res = "\n".join(lines[end:start]).strip("\n")
+    res = re.sub("\\n", " ", res)
+    res = re.sub("[\\_\\\]", "", res)
+    res = re.sub(" +", " ", res)
+    result = {"type": "constructionName", "value": res, "line": end, "end": start, "place": 100 / len(lines) * k}
     return result
 
 def milestone(text, doctype, miestoneend, splitplace):
@@ -288,7 +379,7 @@ def milestone(text, doctype, miestoneend, splitplace):
     k = 0
     lines = text.split("\n")
     if miestoneend["line"]: # and miestoneend["place"] >30
-        start = miestoneend["line"]+1
+        start = miestoneend["line"]
     else:
         start = 0
     if doctype["line"] and doctype["place"] >30:
@@ -298,11 +389,21 @@ def milestone(text, doctype, miestoneend, splitplace):
     for line in lines[start:end]:
         match = re.search(param["titular"]["milestone"]["reg"], line.lower())
         if match:
+            if "»" == line.lower()[match.start()-1]:
+                match = None
+        if match:
             result.append({"type": "milestone", "value": line, "line": k, "place": 100 / len(lines) * k})
+        else:
+            try:
+                match = re.search(param["titular"]["milestone"]["reg"], line.lower()+lines[k+1].lower())
+                if match:
+                    result.append({"type": "milestone", "value": line, "line": k, "place": 100 / len(lines) * k})
+            except:
+                pass
         k+=1
 
     if result == []:
-        result = {"type": "milestone", "value": None, "line": None, "place": None}
+        result = {"type": "milestone", "value": "", "line": None, "place": None}
     elif end != len(lines) and start != 0:
         result = {"type": "milestone", "value": "\n".join(lines[start:end]), "line": start, "end": end, "place": 100 / len(lines) * start}
     elif end != len(lines):
@@ -325,11 +426,15 @@ def milestone(text, doctype, miestoneend, splitplace):
         result = {"type": "milestone", "value": "\n".join(ml), "line": k, "end": len(ml)+k, "place": 100 / len(lines) * k}
     if result["value"]:
         result["value"] = re.sub("(Э|э)(ТАП|тап)", "\nЭтап", result["value"].replace("\n", " ")).strip("\n")
+        res = result["value"]
+        res = re.sub("\\n", " ", res)
+        res = re.sub("[\\_\\\]", "", res)
+        result["value"] = re.sub(" +", " ", res)
     return result
 
 def inventoryNumber(text, splitplace):
 
-    result = {"type": "inventoryNumber", "value": None, "line": None, "place": None}
+    result = {"type": "inventoryNumber", "value": "", "line": None, "place": None}
 
     lines = text.split("\n")
     k = len(lines)
